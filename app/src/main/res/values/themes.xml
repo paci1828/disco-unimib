@@ -2,8 +2,16 @@
     <!-- Base application theme. -->
     <style name="Base.Theme.DiscoUnimib" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
     </style>
 
     <style name="Theme.DiscoUnimib" parent="Base.Theme.DiscoUnimib" />
+
+    <style name="Theme.DiscoUnimib.AppBarOverlay" parent="ThemeOverlay.Material3.Dark.ActionBar" />
+
+    <style name="Theme.DiscoUnimib.PopupOverlay" parent="ThemeOverlay.Material3.Light" />
+
+    <style name="Theme.DiscoUnimib.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
 </resources>

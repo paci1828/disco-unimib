@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "791889335400",
+    "project_id": "discounimib-2026-277ec",
+    "storage_bucket": "discounimib-2026-277ec.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:791889335400:android:dbe2a27572b01554b417dd",
+        "android_client_info": {
+          "package_name": "com.simone.discounimib"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "791889335400-ml354c416rqha25351cavn7acav3rjba.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKH_SNuypnw6QSYstzTDBEGZZlY8O5iBo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "791889335400-ml354c416rqha25351cavn7acav3rjba.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

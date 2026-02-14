@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.simone.discounimib" />
+                  <option name="mobileSdkAppId" value="1:791889335400:android:dbe2a27572b01554b417dd" />
+                  <option name="projectId" value="discounimib-2026-277ec" />
+                  <option name="projectNumber" value="791889335400" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

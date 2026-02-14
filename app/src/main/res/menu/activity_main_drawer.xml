@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="navigation_view">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_home"
+            android:icon="@android:drawable/ic_menu_today"
+            android:title="@string/menu_home" />
+
+        <!-- Professore items -->
+        <item
+            android:id="@+id/nav_appointments_pending"
+            android:icon="@android:drawable/ic_menu_help"
+            android:title="@string/menu_appointments_pending"
+            android:visible="false" />
+        <item
+            android:id="@+id/nav_manage_availability"
+            android:icon="@android:drawable/ic_menu_agenda"
+            android:title="@string/menu_manage_availability"
+            android:visible="false" />
+        <item
+            android:id="@+id/nav_office_hours"
+            android:icon="@android:drawable/ic_menu_edit"
+            android:title="Orario Ricevimento"
+            android:visible="false" />
+
+        <!-- Studente items -->
+        <item
+            android:id="@+id/nav_book_appointment"
+            android:icon="@android:drawable/ic_menu_add"
+            android:title="@string/menu_book_appointment"
+            android:visible="false" />
+        <item
+            android:id="@+id/nav_my_appointments"
+            android:icon="@android:drawable/ic_menu_myplaces"
+            android:title="@string/menu_my_appointments"
+            android:visible="false" />
+
+        <item
+            android:id="@+id/nav_all_appointments"
+            android:icon="@android:drawable/ic_menu_recent_history"
+            android:title="@string/menu_all_appointments" />
+    </group>
+
+    <item android:title="Altro">
+        <menu>
+            <item
+                android:id="@+id/nav_settings"
+                android:icon="@android:drawable/ic_menu_preferences"
+                android:title="@string/menu_settings" />
+            <item
+                android:id="@+id/nav_logout"
+                android:icon="@android:drawable/ic_lock_power_off"
+                android:title="@string/menu_logout" />
+        </menu>
+    </item>
+</menu>

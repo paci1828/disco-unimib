@@ -1,4 +1,29 @@
 <resources>
-    <string name="app_name">DiscoUnimib</string>
-    <string name="sono_dentro">Sono dentro!</string>
+    <string name="app_name">DISCo Calendar</string>
+    <string name="title_activity_login">Accedi</string>
+    <string name="title_activity_home">Home</string>
+
+    <!-- Login -->
+    <string name="prompt_email">Email</string>
+    <string name="prompt_password">Password</string>
+    <string name="action_login">Accedi</string>
+    <string name="remember_me">Ricorda credenziali</string>
+    <string name="forgot_password">Password dimenticata?</string>
+
+    <!-- Navigation Drawer -->
+    <string name="navigation_drawer_open">Apri menu di navigazione</string>
+    <string name="navigation_drawer_close">Chiudi menu di navigazione</string>
+    <string name="nav_header_title">Nome Utente</string>
+    <string name="nav_header_subtitle">email@example.com</string>
+    <string name="nav_header_desc">Immagine profilo utente</string>
+
+    <!-- Menu items -->
+    <string name="menu_home">Home</string>
+    <string name="menu_appointments_pending">Appuntamenti sospesi</string>
+    <string name="menu_all_appointments">Tutti gli appuntamenti</string>
+    <string name="menu_manage_availability">Gestione indisponibilità</string>
+    <string name="menu_book_appointment">Prenota appuntamento</string>
+    <string name="menu_my_appointments">I miei appuntamenti</string>
+    <string name="menu_settings">Impostazioni</string>
+    <string name="menu_logout">Logout</string>
 </resources>
