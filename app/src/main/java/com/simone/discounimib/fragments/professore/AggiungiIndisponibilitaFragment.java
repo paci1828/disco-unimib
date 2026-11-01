@@ -84,15 +84,19 @@ public class AggiungiIndisponibilitaFragment extends Fragment {
         ind.setOraFine(endOra);
         ind.setMotivo(motivo);
 
+        binding.saveButton.setEnabled(false);
         viewModel.aggiungiIndisponibilita(ind, new IndisponibilitaRepository.OnTaskCompleted() {
             @Override
             public void onSuccess() {
+                if (binding == null) return;
                 Toast.makeText(getContext(), "Indisponibilità salvata", Toast.LENGTH_SHORT).show();
                 getParentFragmentManager().popBackStack();
             }
 
             @Override
             public void onError(String message) {
+                if (binding == null) return;
+                binding.saveButton.setEnabled(true);
                 Toast.makeText(getContext(), "Errore: " + message, Toast.LENGTH_SHORT).show();
             }
         });

@@ -28,6 +28,11 @@ public class OrariDisponibiliAdapter extends RecyclerView.Adapter<OrariDisponibi
         notifyDataSetChanged();
     }
 
+    public void setSelectedTime(String time) {
+        selectedPosition = slots.indexOf(time);
+        notifyDataSetChanged();
+    }
+
     @NonNull
     @Override
     public SlotViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -58,7 +63,7 @@ public class OrariDisponibiliAdapter extends RecyclerView.Adapter<OrariDisponibi
                 if (position != RecyclerView.NO_POSITION) {
                     int previousSelected = selectedPosition;
                     selectedPosition = position;
-                    notifyItemChanged(previousSelected);
+                    if (previousSelected != RecyclerView.NO_POSITION) notifyItemChanged(previousSelected);
                     notifyItemChanged(selectedPosition);
                     
                     if (listener != null) {

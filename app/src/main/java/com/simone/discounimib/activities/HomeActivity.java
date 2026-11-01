@@ -26,6 +26,7 @@ import com.simone.discounimib.fragments.professore.ModificaOrarioFragment;
 import com.simone.discounimib.fragments.studente.ElencoAppuntamentiStudenteFragment;
 import com.simone.discounimib.fragments.studente.PrenotaAppuntamentoCalendarioFragment;
 import com.simone.discounimib.utils.SharedPreferencesManager;
+import com.simone.discounimib.utils.GestoreSessioneUtente;
 
 public class HomeActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
@@ -60,6 +61,12 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         }
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (!new GestoreSessioneUtente(this).valida()) logout();
+    }
+
     private void loadDefaultFragment() {
         if ("professore".equalsIgnoreCase(userRole)) {
             replaceFragment(new HomeProfessoreFragment());
@@ -88,7 +95,8 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         binding.navView.getMenu().findItem(R.id.nav_appointments_pending).setVisible(isProf);
         binding.navView.getMenu().findItem(R.id.nav_manage_availability).setVisible(isProf);
         binding.navView.getMenu().findItem(R.id.nav_office_hours).setVisible(isProf);
-        
+        binding.navView.getMenu().findItem(R.id.nav_all_appointments).setVisible(isProf);
+
         binding.navView.getMenu().findItem(R.id.nav_book_appointment).setVisible(isStud);
         binding.navView.getMenu().findItem(R.id.nav_my_appointments).setVisible(isStud);
     }
@@ -133,7 +141,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
     }
 
     private void logout() {
-        prefManager.clear();
+        new GestoreSessioneUtente(this).termina();
         Intent intent = new Intent(this, LoginActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);

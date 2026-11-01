@@ -13,7 +13,6 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.simone.discounimib.databinding.ActivityRegisterBinding;
-import com.simone.discounimib.models.Professore;
 import com.simone.discounimib.models.User;
 import com.simone.discounimib.utils.SharedPreferencesManager;
 
@@ -36,6 +35,9 @@ public class RegisterActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         prefManager = new SharedPreferencesManager(this);
 
+        binding.radioProfessore.setEnabled(false);
+        binding.radioProfessore.setText("Docente: abilitazione amministrativa");
+        binding.radioStudente.setChecked(true);
         binding.registerButton.setOnClickListener(v -> registerUser());
         binding.loginLinkTextView.setOnClickListener(v -> finish());
     }
@@ -46,7 +48,7 @@ public class RegisterActivity extends AppCompatActivity {
         String email = Objects.requireNonNull(binding.emailEditText.getText()).toString().trim();
         String password = Objects.requireNonNull(binding.passwordEditText.getText()).toString().trim();
         String matricola = Objects.requireNonNull(binding.matricolaEditText.getText()).toString().trim();
-        String role = binding.radioProfessore.isChecked() ? "professore" : "studente";
+        String role = "studente"; // Il ruolo docente deve essere assegnato da un amministratore.
 
         if (TextUtils.isEmpty(name)) {
             binding.nameInputLayout.setError("Inserisci il nome");
@@ -82,14 +84,8 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void saveUserToFirestore(String uid, String name, String surname, String email, String role, String matricola) {
-        User user;
         Timestamp now = Timestamp.now();
-        
-        if ("professore".equals(role)) {
-            user = new Professore(uid, email, name, surname, role, null,  null, null,null, 30);
-        } else {
-            user = new User(uid, email, name, surname, role, matricola);
-        }
+        User user = new User(uid, email, name, surname, role, matricola);
         
         user.setDataCreazione(now);
         user.setUltimoAccesso(now);
@@ -97,6 +93,8 @@ public class RegisterActivity extends AppCompatActivity {
         db.collection("users").document(uid).set(user)
                 .addOnSuccessListener(aVoid -> {
                     prefManager.saveUser(uid, role);
+                    prefManager.saveString("user_full_name", name + " " + surname);
+                    prefManager.setRememberMe(false);
                     Toast.makeText(RegisterActivity.this, "Registrazione completata!", Toast.LENGTH_SHORT).show();
                     startActivity(new Intent(RegisterActivity.this, HomeActivity.class));
                     finishAffinity();
