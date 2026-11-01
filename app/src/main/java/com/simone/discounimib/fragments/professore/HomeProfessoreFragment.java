@@ -10,6 +10,8 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import com.simone.discounimib.adapters.AppuntamentiAdapter;
+import com.simone.discounimib.R;
+import com.simone.discounimib.fragments.professore.AccettaRifiutaAppuntamentoFragment;
 import com.simone.discounimib.databinding.FragmentHomeProfessoreBinding;
 import com.simone.discounimib.utils.SharedPreferencesManager;
 import com.simone.discounimib.viewmodels.AppuntamentiViewModel;
@@ -20,6 +22,8 @@ public class HomeProfessoreFragment extends Fragment {
     private AppuntamentiViewModel viewModel;
     private AppuntamentiAdapter adapter;
     private SharedPreferencesManager prefManager;
+    private androidx.lifecycle.LiveData<java.util.List<com.simone.discounimib.models.Appuntamento>> sorgente;
+
 
     @Nullable
     @Override
@@ -48,6 +52,9 @@ public class HomeProfessoreFragment extends Fragment {
         adapter = new AppuntamentiAdapter();
         binding.appointmentsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         binding.appointmentsRecyclerView.setAdapter(adapter);
+        adapter.setOnItemClickListener(appuntamento -> getParentFragmentManager().beginTransaction()
+                .replace(R.id.nav_host_fragment, AccettaRifiutaAppuntamentoFragment.newInstance(appuntamento.getId()))
+                .addToBackStack(null).commit());
     }
 
     private void setupRefresh() {
@@ -65,7 +72,9 @@ public class HomeProfessoreFragment extends Fragment {
         
         String uid = prefManager.getUserUid();
         
-        viewModel.getAppuntamentiProfessore(uid, "accettato").observe(getViewLifecycleOwner(), appuntamenti -> {
+        if (sorgente != null) sorgente.removeObservers(getViewLifecycleOwner());
+        sorgente = viewModel.getAppuntamentiProfessore(uid, "accettato");
+        sorgente.observe(getViewLifecycleOwner(), appuntamenti -> {
             binding.progressBar.setVisibility(View.GONE);
             binding.swipeRefreshLayout.setRefreshing(false);
 
@@ -82,6 +91,8 @@ public class HomeProfessoreFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        binding.appointmentsRecyclerView.setAdapter(null);
+        sorgente = null;
         binding = null;
     }
 }

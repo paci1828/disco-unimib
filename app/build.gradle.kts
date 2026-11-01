@@ -72,6 +72,7 @@ dependencies {
     implementation(libs.swiperefreshlayout)
     implementation(libs.lifecycle.viewmodel)
     implementation(libs.lifecycle.livedata)
+    implementation("androidx.work:work-runtime:2.12.0")
 
     // Firebase
     implementation(platform(libs.firebase.bom))

@@ -26,6 +26,9 @@ public final class GestoreSessioneUtente {
     public boolean ricordaAccesso() { return valida() && preferenze.isRememberMe(); }
 
     public void termina() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        com.simone.discounimib.sync.SincronizzazioneScheduler.interrompi(context,
+                user == null ? preferenze.getUserUid() : user.getUid());
         FirebaseAuth.getInstance().signOut();
         GoogleSignIn.getClient(context, GoogleSignInOptions.DEFAULT_SIGN_IN).signOut();
         preferenze.clear();

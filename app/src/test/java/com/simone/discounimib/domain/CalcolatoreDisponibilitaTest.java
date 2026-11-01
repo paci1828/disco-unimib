@@ -67,4 +67,15 @@ public class CalcolatoreDisponibilitaTest {
         assertEquals(DayOfWeek.MONDAY, CalcolatoreDisponibilita.giorno(" LUNEDÌ "));
         assertEquals(DayOfWeek.FRIDAY, CalcolatoreDisponibilita.giorno("venerdi"));
     }
+    @Test public void escludeOreInesistentiAlCambioDiMarzo() {
+        assertEquals(Arrays.asList("01:00", "03:00", "03:30"), alCambioOra(LocalDate.of(2026, 3, 29)));
+    }
+    @Test public void escludeOreAmbigueAlCambioDiOttobre() {
+        assertEquals(Arrays.asList("01:00", "03:00", "03:30"), alCambioOra(LocalDate.of(2026, 10, 25)));
+    }
+    private List<String> alCambioOra(LocalDate data) {
+        return CalcolatoreDisponibilita.calcola(data, DayOfWeek.SUNDAY,
+                LocalTime.of(1, 0), LocalTime.of(4, 0), 30,
+                Collections.emptyList(), data.minusDays(1).atStartOfDay());
+    }
 }

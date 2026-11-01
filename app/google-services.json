@@ -1,36 +1,27 @@
 {
   "project_info": {
-    "project_number": "791889335400",
-    "project_id": "discounimib-2026-277ec",
-    "storage_bucket": "discounimib-2026-277ec.firebasestorage.app"
+    "project_number": "522194532599",
+    "firebase_url": "https://discounimib-2026-db0ad-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "discounimib-2026-db0ad",
+    "storage_bucket": "discounimib-2026-db0ad.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:791889335400:android:dbe2a27572b01554b417dd",
+        "mobilesdk_app_id": "1:522194532599:android:60a744d1197aee627e7bf2",
         "android_client_info": {
           "package_name": "com.simone.discounimib"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "791889335400-ml354c416rqha25351cavn7acav3rjba.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDKH_SNuypnw6QSYstzTDBEGZZlY8O5iBo"
+          "current_key": "AIzaSyCFXj3jf1Wgde2VTk-fPzBrSPRXqNHoN6I"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "791889335400-ml354c416rqha25351cavn7acav3rjba.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }

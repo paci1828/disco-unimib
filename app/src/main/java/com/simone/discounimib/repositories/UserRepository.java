@@ -28,7 +28,21 @@ public class UserRepository {
     }
 
     public void updateUser(User user, OnTaskCompleted callback) {
-        db.collection("users").document(user.getUid()).set(user)
+        com.google.firebase.firestore.DocumentReference ref = db.collection("users").document(user.getUid());
+        db.runTransaction(transaction -> {
+            com.google.firebase.firestore.DocumentSnapshot doc = transaction.get(ref);
+            java.util.Map<String, Object> dati = new java.util.HashMap<>(java.util.Objects.requireNonNull(doc.getData(), "Profilo non disponibile"));
+            java.util.Map<String, Object> modifiche = new java.util.HashMap<>();
+            modifiche.put("nome", user.getNome());
+            modifiche.put("cognome", user.getCognome());
+            modifiche.put("matricola", user.getMatricola());
+            dati.putAll(modifiche);
+            transaction.update(ref, modifiche);
+            if ("professore".equals(doc.getString("ruolo"))) {
+                transaction.set(db.collection("professori").document(user.getUid()), DatiPubblici.professore(dati));
+            }
+            return null;
+        })
                 .addOnSuccessListener(aVoid -> callback.onSuccess())
                 .addOnFailureListener(e -> callback.onError(e.getMessage()));
     }

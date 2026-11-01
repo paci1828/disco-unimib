@@ -14,6 +14,9 @@ public class AppuntamentiAdapter extends RecyclerView.Adapter<AppuntamentiAdapte
 
     private List<Appuntamento> appuntamenti = new ArrayList<>();
     private OnItemClickListener listener;
+    private final boolean mostraDocente;
+    public AppuntamentiAdapter() { this(false); }
+    public AppuntamentiAdapter(boolean mostraDocente) { this.mostraDocente = mostraDocente; }
 
     public interface OnItemClickListener {
         void onItemClick(Appuntamento appuntamento);
@@ -67,7 +70,7 @@ public class AppuntamentiAdapter extends RecyclerView.Adapter<AppuntamentiAdapte
             
             // In base a chi visualizza, mostriamo il nome del professore o dello studente
             // Qui mettiamo una logica semplice, poi si può affinare
-            if (appuntamento.getNomeStudente() != null) {
+            if (!mostraDocente) {
                 binding.nomeUtenteTextView.setText(appuntamento.getNomeStudente());
             } else {
                 binding.nomeUtenteTextView.setText(appuntamento.getNomeProfessore());
@@ -81,14 +84,15 @@ public class AppuntamentiAdapter extends RecyclerView.Adapter<AppuntamentiAdapte
         }
 
         private void updateStatoColor(String stato) {
-            if (stato == null) return;
-            switch (stato.toLowerCase()) {
+            if (stato == null) stato = "";
+            switch (stato.toLowerCase(java.util.Locale.ROOT)) {
                 case "accettato":
                     binding.statoTextView.setBackgroundColor(itemView.getContext().getColor(android.R.color.holo_green_dark));
                     break;
                 case "rifiutato":
                     binding.statoTextView.setBackgroundColor(itemView.getContext().getColor(android.R.color.holo_red_dark));
                     break;
+                case "annullato":
                 case "sospeso":
                 default:
                     binding.statoTextView.setBackgroundColor(itemView.getContext().getColor(android.R.color.darker_gray));

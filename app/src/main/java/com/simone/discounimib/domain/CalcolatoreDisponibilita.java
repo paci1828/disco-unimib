@@ -71,6 +71,9 @@ public final class CalcolatoreDisponibilita {
              da = da.plusMinutes(durata)) {
             LocalDateTime a = da.plusMinutes(durata);
             if (!da.isAfter(adesso)) continue;
+            if (FUSO.getRules().getValidOffsets(da).size() != 1
+                    || FUSO.getRules().getValidOffsets(a).size() != 1
+                    || !FUSO.getRules().getOffset(da).equals(FUSO.getRules().getOffset(a))) continue;
             boolean libero = true;
             for (Intervallo intervallo : occupati) {
                 if (intervallo.siSovrappone(da, a)) {

@@ -13,3 +13,12 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Firebase CLI cache, test dependencies, local profile data and diagnostic logs
+.firebase/
+node_modules/
+firebase-debug.log
+firebase-debug.*.log
+firestore-debug.log
+ui-debug.log
+tools/firebase/profiles.local.json

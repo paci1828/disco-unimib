@@ -62,7 +62,7 @@ public class ProfessoriAdapter extends RecyclerView.Adapter<ProfessoriAdapter.Pr
 
         public void bind(Professore professore) {
             binding.profNameTextView.setText(professore.getNome() + " " + professore.getCognome());
-            binding.profEmailTextView.setText(professore.getEmail());
+            binding.profEmailTextView.setVisibility(android.view.View.GONE);
             
             String ricevimento = "Ricevimento: " + professore.getGiornoRicevimento() + " " + 
                                professore.getOraInizio() + " - " + professore.getOraFine();

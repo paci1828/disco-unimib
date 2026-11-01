@@ -1,0 +1,114 @@
+{
+  "score": 2,
+  "summary": "Regole prototipo: i 26 test locali verificano privacy, ruoli, schema, transizioni e copie atomiche. Rimane una lacuna di integrità del calendario contro client modificati: assenze e tutte le sovrapposizioni non sono verificate da un backend autorevole. Il punteggio complessivo segue questo limite di business, non una fuga di profili o contatti rilevata.",
+  "findings": [
+    {
+      "check": "Business Logic vs. Rules",
+      "severity": "major",
+      "issue": "Un client modificato può richiedere uno slot durante un'assenza oppure sovrapposto a una prenotazione con inizio diverso dopo un cambio di griglia/durata. Le regole controllano orario settimanale, durata, griglia, futuro e unicità dello stesso istante iniziale; il controllo completo degli intervalli e delle assenze è nel client.",
+      "recommendation": "Spostare creazione e riprogrammazione in un backend autenticato che verifichi assenze, sovrapposizioni e versione in transazione; negare poi le corrispondenti scritture dirette dai client."
+    }
+  ],
+  "verification": {
+    "date": "2026-11-01",
+    "project": "discounimib-2026-db0ad",
+    "emulatorProject": "demo-discounimib",
+    "rulesTests": {
+      "passed": 26,
+      "failed": 0,
+      "skipped": 0
+    },
+    "android": {
+      "unitTests": 64,
+      "assembleDebug": "passed",
+      "lintDebug": "passed"
+    },
+    "scope": "Test locali su emulatore e analisi statica; salvataggio dell'orario su dispositivo con profili reali ancora da verificare.",
+    "checks": [
+      {
+        "check": "Accesso anonimo",
+        "result": "denied in all seven collections"
+      },
+      {
+        "check": "Lettura privata di profili e query globale",
+        "result": "owner only; general list denied"
+      },
+      {
+        "check": "UID/email della registrazione",
+        "result": "bound to authenticated identity"
+      },
+      {
+        "check": "Autoassegnazione ruolo",
+        "result": "denied on create and update"
+      },
+      {
+        "check": "Update bypass",
+        "result": "immutable identities and exact changed-field frames"
+      },
+      {
+        "check": "Campi obbligatori, extra, tipi e dimensioni",
+        "result": "validated; negative test coverage"
+      },
+      {
+        "check": "Modifica orario",
+        "result": "owner professor, exact version increment, atomic public mirror"
+      },
+      {
+        "check": "Directory",
+        "result": "authenticated reads, no email or matricola"
+      },
+      {
+        "check": "Query appuntamenti",
+        "result": "participants only"
+      },
+      {
+        "check": "Proiezioni disponibilità",
+        "result": "sanitized and atomically linked to private source"
+      },
+      {
+        "check": "Impersonificazione",
+        "result": "denied; initial student identity bound to own private profile"
+      },
+      {
+        "check": "Tempo e durata",
+        "result": "future, weekly window/grid, timestamp/string consistency"
+      },
+      {
+        "check": "Cambio ora",
+        "result": "valid slots accepted; ambiguous or missing endpoints denied"
+      },
+      {
+        "check": "Doppio inizio",
+        "result": "canonical UTC lock cannot overwrite an active booking"
+      },
+      {
+        "check": "Accettazione e rifiuto",
+        "result": "participating professor only"
+      },
+      {
+        "check": "Annullamento",
+        "result": "future active appointment, participant only; releases lock and keeps history"
+      },
+      {
+        "check": "Riprogrammazione",
+        "result": "atomic predecessor cancellation and successor linkage"
+      },
+      {
+        "check": "Sincronizzazione Google",
+        "result": "participating professor only; bounded fields and revisions"
+      },
+      {
+        "check": "Indisponibilità",
+        "result": "private reason, public interval, atomic mirror and version"
+      },
+      {
+        "check": "Sottocollezioni e percorsi sconosciuti",
+        "result": "default deny"
+      },
+      {
+        "check": "Calendario autorevole contro client modificati",
+        "result": "known limitation described in findings; not claimed as enforced"
+      }
+    ]
+  }
+}

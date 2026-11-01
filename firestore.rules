@@ -1,0 +1,318 @@
+rules_version = '2';
+// Modelli: users/{uid} privato (uid/email/ruolo/creazione immutabili, nomi <=100,
+// matricola <=64, timestamp, eventuale orario docente e versione >=0).
+// professori/{uid}: solo nome professionale e orario, copia di users, senza email.
+// appuntamenti/{id}: identità partecipanti, data/orari, motivo <=4000,
+// stato/revisioni e checkpoint Google; accesso esclusivo ai due partecipanti.
+// occupazioni/{id}: idProfessore/data/orari/stato, copia senza dati personali.
+// slotPrenotati/{profUid_epochMillis}: unico appuntamento attivo per inizio.
+// indisponibilita/{id}: intervallo e motivo <=4000 privati del docente.
+// assenze/{id}: copia intervallo senza motivo. Nessuna cancellazione dello storico.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signed() { return request.auth != null; }
+    function owner(uid) { return signed() && request.auth.uid == uid; }
+    function str(s, min, max) { return s is string && s.size() >= min && s.size() <= max; }
+    function optionalString(d, k, max) { return d.get(k, null) == null || str(d[k], 0, max); }
+    function recent(t) {
+      return t is timestamp && t >= request.time - duration.value(5, 'm')
+        && t <= request.time + duration.value(5, 'm');
+    }
+    function user(uid) { return get(/databases/$(database)/documents/users/$(uid)).data; }
+    function teacher(uid) { return signed() && user(uid).ruolo == 'professore'; }
+    function time(t) { return t is string && t.matches('([01][0-9]|2[0-3]):[0-5][0-9]'); }
+    function minutes(t) { return int(t.split(':')[0]) * 60 + int(t.split(':')[1]); }
+    function parseDate(d) {
+      let p = d.split('/');
+      return timestamp.date(int(p[2]),int(p[1]),int(p[0]));
+    }
+    function realDate(d) {
+      let p = d.split('/');
+      let value = timestamp.date(int(p[2]),int(p[1]),int(p[0]));
+      return value.day() == int(p[0]) && value.month() == int(p[1]);
+    }
+    function validDate(d) {
+      return d is string && d.matches('[0-9]{2}/[0-9]{2}/20[0-9]{2}') && realDate(d);
+    }
+    function sunday(y, m) { return 31 - timestamp.date(y, m, 31).dayOfWeek() % 7; }
+    function offsetAt(x) {
+      let m = x.month();
+      let dom = x.day();
+      let transition = (m == 3 || m == 10) ? sunday(x.year(),m) : 0;
+      return (m>3 && m<10) || (m==3 && (dom>transition || (dom==transition && x.hours()>=1)))
+        || (m==10 && (dom<transition || (dom==transition && x.hours()<1))) ? 120 : 60;
+    }
+    function transitionDay(x) {
+      return (x.month() == 3 || x.month() == 10) && x.day() == sunday(x.year(),x.month());
+    }
+    function start(a) { return a.inizioIstante; }
+    function schedule(p) {
+      return p.giornoRicevimento in ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica']
+        && time(p.oraInizio) && time(p.oraFine) && minutes(p.oraFine) > minutes(p.oraInizio)
+        && p.durataAppuntamento is int && p.durataAppuntamento > 0
+        && p.durataAppuntamento <= minutes(p.oraFine) - minutes(p.oraInizio);
+    }
+    function publicTeacher(p) {
+      return {'uid':p.uid,'nome':p.nome,'cognome':p.cognome,'ruolo':p.ruolo,
+        'giornoRicevimento':p.giornoRicevimento,'oraInizio':p.oraInizio,'oraFine':p.oraFine,
+        'durataAppuntamento':p.durataAppuntamento,'disponibilitaVersione':p.disponibilitaVersione};
+    }
+    function validUser(p, uid) {
+      return p.keys().hasAll(['uid','email','nome','cognome','ruolo','matricola','dataCreazione','ultimoAccesso'])
+        && p.keys().hasOnly(['uid','email','nome','cognome','ruolo','matricola','dataCreazione','ultimoAccesso',
+          'giornoRicevimento','oraInizio','oraFine','durataAppuntamento','disponibilitaVersione'])
+        && p.uid == uid && str(uid,1,128) && str(p.email,3,320)
+        && str(p.nome,1,100) && str(p.cognome,1,100) && str(p.matricola,0,64)
+        && p.dataCreazione is timestamp && p.ultimoAccesso is timestamp
+        && (p.ruolo == 'studente' ? p.keys().hasOnly(['uid','email','nome','cognome','ruolo','matricola','dataCreazione','ultimoAccesso'])
+          : p.ruolo == 'professore' && schedule(p) && p.disponibilitaVersione is int
+            && p.disponibilitaVersione >= 0 && p.disponibilitaVersione < 1000000000);
+    }
+    function teacherMirror(p, uid) {
+      return getAfter(/databases/$(database)/documents/professori/$(uid)).data == publicTeacher(p);
+    }
+    function validPublicTeacher(p, uid) {
+      return p.keys().hasOnly(['uid','nome','cognome','ruolo','giornoRicevimento',
+        'oraInizio','oraFine','durataAppuntamento','disponibilitaVersione'])
+        && p.uid == uid && str(uid,1,128) && str(p.nome,1,100) && str(p.cognome,1,100)
+        && p.ruolo == 'professore' && schedule(p)
+        && p.disponibilitaVersione is int && p.disponibilitaVersione >= 0 && p.disponibilitaVersione < 1000000000;
+    }
+    match /users/{uid} {
+      allow read: if owner(uid);
+      allow create: if owner(uid) && validUser(request.resource.data, uid)
+        && request.resource.data.ruolo == 'studente'
+        && request.resource.data.email == request.auth.token.email
+        && recent(request.resource.data.dataCreazione) && recent(request.resource.data.ultimoAccesso);
+      allow update: if owner(uid) && validUser(request.resource.data, uid)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid','email','ruolo','dataCreazione'])
+        && (request.resource.data.ultimoAccesso == resource.data.ultimoAccesso || recent(request.resource.data.ultimoAccesso))
+        && (resource.data.ruolo != 'professore' || (
+          teacherMirror(request.resource.data, uid)
+          && (request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['giornoRicevimento','oraInizio','oraFine','durataAppuntamento','disponibilitaVersione'])
+            ? request.resource.data.disponibilitaVersione == resource.data.disponibilitaVersione + 1
+            : request.resource.data.disponibilitaVersione == resource.data.disponibilitaVersione)));
+      allow delete: if false;
+    }
+    match /professori/{uid} {
+      allow read: if signed();
+      allow create, update: if owner(uid) && teacher(uid) && validPublicTeacher(request.resource.data, uid)
+        && request.resource.data == publicTeacher(getAfter(/databases/$(database)/documents/users/$(uid)).data);
+      allow delete: if false;
+    }
+    function active(a) { return a.stato in ['sospeso','accettato']; }
+    function participant(a) { return signed() && (request.auth.uid == a.idStudente || request.auth.uid == a.idProfessore); }
+    function slotKey(a) { return a.idProfessore+'_'+string(a.inizioIstante.toMillis()); }
+    function occupation(a) {
+      return {'idProfessore':a.idProfessore,'data':a.data,'oraInizio':a.oraInizio,'oraFine':a.oraFine,'stato':a.stato};
+    }
+    function mirrors(a, id) {
+      let k = slotKey(a);
+      return getAfter(/databases/$(database)/documents/occupazioni/$(id)).data == occupation(a)
+        && (active(a) ? getAfter(/databases/$(database)/documents/slotPrenotati/$(k)).data.appuntamentoId == id
+          : (!existsAfter(/databases/$(database)/documents/slotPrenotati/$(k))
+            || getAfter(/databases/$(database)/documents/slotPrenotati/$(k)).data.appuntamentoId != id));
+    }
+    function revisions(a) {
+      return a.revisione is int && a.revisione >= 0 && a.revisione < 1000000000
+        && a.sincronizzataRevisione is int && a.sincronizzataRevisione >= 0 && a.sincronizzataRevisione <= a.revisione
+        && a.calendarioRevisione is int && a.calendarioRevisione >= 0 && a.calendarioRevisione <= a.revisione
+        && a.emailRevisione is int && a.emailRevisione >= 0 && a.emailRevisione <= a.revisione;
+    }
+    function initialShape(a, id) {
+      let linked = a.appuntamentoPrecedenteId != null;
+      let docent = owner(a.idProfessore);
+      let pending = !linked || !docent;
+      return a == {
+        'id':id,'idProfessore':a.idProfessore,'idStudente':a.idStudente,
+        'data':a.data,'oraInizio':a.oraInizio,'oraFine':a.oraFine,
+        'inizioIstante':a.inizioIstante,'fineIstante':a.fineIstante,
+        'motivazione':a.motivazione,'dataCreazione':a.dataCreazione,
+        'nomeStudente':a.nomeStudente,'nomeProfessore':a.nomeProfessore,
+        'emailStudente':a.emailStudente,'emailProfessore':a.emailProfessore,
+        'stato':pending ? 'sospeso' : 'accettato','revisione':linked ? 1 : 0,
+        'sincronizzataRevisione':linked && pending ? 1 : 0,
+        'calendarioRevisione':0,'emailRevisione':0,'statoEmail':null,
+        'eventoGoogleCalendarId':null,'erroreSincronizzazione':null,
+        'statoSincronizzazione':linked ? (pending ? 'non_richiesta' : 'in_attesa') : null,
+        'appuntamentoPrecedenteId':a.appuntamentoPrecedenteId,'sostituitoDaId':null
+      };
+    }
+    // Nome e contatti sono uguali ai profili validati (o al predecessore immutabile).
+    // Data e orari sono uguali al formato canonico degli istanti in availableTime.
+    // La mappa esatta impone campi obbligatori e soli checkpoint iniziali consentiti.
+    function validApp(a, id) {
+      return str(id,1,160) && str(a.idProfessore,1,128) && str(a.idStudente,1,128)
+        && a.idProfessore!=a.idStudente && str(a.motivazione,1,4000)
+        && a.inizioIstante is timestamp && a.fineIstante is timestamp
+        && optionalString(a,'emailProfessore',320)
+        && (a.appuntamentoPrecedenteId==null || str(a.appuntamentoPrecedenteId,1,160))
+        && a.revisione is int && a.sincronizzataRevisione is int
+        && a.calendarioRevisione is int && a.emailRevisione is int && initialShape(a,id);
+    }
+    function pad(n) { return (n<10 ? '0' : '')+string(n); }
+    function dateText(t) { return pad(t.day())+'/'+pad(t.month())+'/'+string(t.year()); }
+    function timeText(t) { return pad(t.hours())+':'+pad(t.minutes()); }
+    function availableTime(a) {
+      let p = get(/databases/$(database)/documents/professori/$(a.idProfessore)).data;
+      let off = offsetAt(a.inizioIstante);
+      let local = a.inizioIstante+duration.value(off,'m');
+      let end = a.fineIstante+duration.value(off,'m');
+      let s = local.hours()*60+local.minutes();
+      let e = end.hours()*60+end.minutes();
+      let ps = minutes(p.oraInizio);
+      let pe = minutes(p.oraFine);
+      return p.uid==a.idProfessore && p.ruolo=='professore' && p.durataAppuntamento is int && p.durataAppuntamento>0
+        && a.inizioIstante>request.time && local.year()<2100 && local.date()==end.date()
+        && a.inizioIstante.toMillis()%60000==0 && a.inizioIstante==timestamp.value(a.inizioIstante.toMillis())
+        && a.fineIstante-a.inizioIstante==duration.value(p.durataAppuntamento,'m')
+        && off==offsetAt(a.fineIstante) && (!transitionDay(local) || (local.hours()!=2 && end.hours()!=2))
+        && a.data==dateText(local) && a.oraInizio==timeText(local) && a.oraFine==timeText(end)
+        && ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'][local.dayOfWeek()-1]==p.giornoRicevimento
+        && s>=ps && e<=pe && (s-ps)%p.durataAppuntamento==0;
+    }
+    function linkedCreation(a) {
+      let id = a.appuntamentoPrecedenteId;
+      let before = get(/databases/$(database)/documents/appuntamenti/$(id)).data;
+      let after = getAfter(/databases/$(database)/documents/appuntamenti/$(id)).data;
+      return participant(before) && active(before) && start(before)>request.time
+        && after.stato=='annullato' && after.sostituitoDaId==a.id
+        && a.diff(before).affectedKeys().hasOnly(['id','data','oraInizio','oraFine','inizioIstante','fineIstante',
+          'stato','dataCreazione','revisione','sincronizzataRevisione','calendarioRevisione','emailRevisione',
+          'statoSincronizzazione','erroreSincronizzazione','statoEmail','eventoGoogleCalendarId',
+          'appuntamentoPrecedenteId','sostituitoDaId','syncLeaseToken','syncLeaseFino'])
+        && user(request.auth.uid).ruolo==(owner(a.idProfessore) ? 'professore' : 'studente');
+    }
+    function initialCreation(a) {
+      let s = user(a.idStudente);
+      let p = get(/databases/$(database)/documents/professori/$(a.idProfessore)).data;
+      return owner(a.idStudente) && s.ruolo == 'studente' && a.stato == 'sospeso'
+        && a.revisione == 0 && a.nomeStudente == s.nome+' '+s.cognome
+        && a.emailStudente == s.email && a.nomeProfessore == p.nome+' '+p.cognome
+        && a.get('emailProfessore',null) == null;
+    }
+    function legalTransition(old, a) {
+      return active(old) && start(old) > request.time && (
+        (a.stato == 'annullato' && participant(old))
+        || (owner(old.idProfessore) && teacher(old.idProfessore) && old.stato == 'sospeso'
+          && a.stato in ['accettato','rifiutato']));
+    }
+    function successorMatches(a,id) {
+      let next = getAfter(/databases/$(database)/documents/appuntamenti/$(id)).data;
+      return a.stato=='annullato' && next.appuntamentoPrecedenteId==a.id
+        && next.idStudente==a.idStudente && next.idProfessore==a.idProfessore;
+    }
+    function successor(a) {
+      let id = a.get('sostituitoDaId',null);
+      return id==null || successorMatches(a,id);
+    }
+    // Frame immutabile: tutti i dati personali e temporali restano quelli validati
+    // alla creazione. I soli valori modificabili sono validati qui sul nuovo stato.
+    function businessUpdate(a,old,id) {
+      return a.diff(old).affectedKeys().hasOnly(['stato','revisione','statoSincronizzazione',
+          'erroreSincronizzazione','sostituitoDaId'])
+        && a.revisione is int && a.revisione==old.revisione+1 && a.revisione<1000000000
+        && a.statoSincronizzazione=='in_attesa' && a.get('erroreSincronizzazione',null)==null
+        && (a.get('sostituitoDaId',null)==null || str(a.sostituitoDaId,1,160))
+        && legalTransition(old,a) && successor(a) && mirrors(a,id);
+    }
+    function syncUpdate(a, old) {
+      return owner(old.idProfessore) && teacher(old.idProfessore)
+        && a.diff(old).affectedKeys().hasOnly(['revisione','sincronizzataRevisione','calendarioRevisione','emailRevisione',
+          'statoSincronizzazione','erroreSincronizzazione','statoEmail','eventoGoogleCalendarId','syncLeaseToken','syncLeaseFino'])
+        && (a.revisione == old.revisione || (old.revisione == 0 && a.revisione == 1 && old.stato != 'sospeso'));
+    }
+    // Entrambi i rami di aggiornamento ammettono solo stato/revisioni/checkpoint:
+    // identità, data, orari, motivo e creazione restano invariati rispetto al documento valido.
+    function validAppUpdate(a) {
+      return revisions(a) && a.stato in ['sospeso','accettato','rifiutato','annullato']
+        && optionalString(a,'sostituitoDaId',160) && optionalString(a,'eventoGoogleCalendarId',1024)
+        && optionalString(a,'erroreSincronizzazione',8192) && optionalString(a,'syncLeaseToken',128)
+        && (a.get('syncLeaseFino',null) == null || (a.syncLeaseFino is int && a.syncLeaseFino >= 0
+          && a.syncLeaseFino <= request.time.toMillis()+900000))
+        && a.get('statoSincronizzazione',null) in [null,'in_attesa','in_corso','autorizzazione_richiesta',
+          'email_da_verificare','errore_permanente','completata','non_richiesta']
+        && a.get('statoEmail',null) in [null,'in_invio','inviata','da_inviare','da_verificare','gestita'];
+    }
+    match /appuntamenti/{id} {
+      allow get: if signed() && (!exists(/databases/$(database)/documents/appuntamenti/$(id)) || participant(resource.data));
+      allow list: if participant(resource.data);
+      allow create: if signed() && validApp(request.resource.data,id)
+        && recent(request.resource.data.dataCreazione) && availableTime(request.resource.data)
+        && (request.resource.data.appuntamentoPrecedenteId==null
+          ? initialCreation(request.resource.data) : linkedCreation(request.resource.data))
+        && mirrors(request.resource.data,id);
+      allow update: if participant(resource.data)
+        && (businessUpdate(request.resource.data,resource.data,id)
+          || (syncUpdate(request.resource.data,resource.data) && validAppUpdate(request.resource.data)));
+      allow delete: if false;
+    }
+    // L'uguaglianza con occupation(getAfter(appuntamento)) trasferisce anche
+    // tipi e limiti già validati sul documento sorgente, senza ripetere il parsing.
+    function validOccupation(o) {
+      return o.keys().hasOnly(['idProfessore','data','oraInizio','oraFine','stato']);
+    }
+    match /occupazioni/{id} {
+      allow read: if signed();
+      allow create, update: if signed() && validOccupation(request.resource.data)
+        && participant(getAfter(/databases/$(database)/documents/appuntamenti/$(id)).data)
+        && request.resource.data == occupation(getAfter(/databases/$(database)/documents/appuntamenti/$(id)).data);
+      allow delete: if false;
+    }
+    // lockMatches confronta tutti i valori con l'appuntamento validato.
+    function validLock(l) {
+      return l.keys().hasOnly(['appuntamentoId','idProfessore','data','oraInizio'])
+        && str(l.appuntamentoId,1,160);
+    }
+    function lockMatches(l, k) {
+      let a = getAfter(/databases/$(database)/documents/appuntamenti/$(l.appuntamentoId)).data;
+      return participant(a) && active(a) && slotKey(a) == k
+        && l.idProfessore == a.idProfessore && l.data == a.data && l.oraInizio == a.oraInizio;
+    }
+    match /slotPrenotati/{k} {
+      allow read: if signed();
+      allow create: if signed() && validLock(request.resource.data) && lockMatches(request.resource.data,k);
+      allow update: if signed() && validLock(request.resource.data) && lockMatches(request.resource.data,k)
+        && !active(getAfter(/databases/$(database)/documents/appuntamenti/$(resource.data.appuntamentoId)).data);
+      allow delete: if signed() && participant(getAfter(/databases/$(database)/documents/appuntamenti/$(resource.data.appuntamentoId)).data)
+        && !active(getAfter(/databases/$(database)/documents/appuntamenti/$(resource.data.appuntamentoId)).data);
+    }
+    function absence(i) {
+      return {'idProfessore':i.idProfessore,'dataInizio':i.dataInizio,'dataFine':i.dataFine,
+        'oraInizio':i.oraInizio,'oraFine':i.oraFine};
+    }
+    function validAbsence(i) {
+      return str(i.idProfessore,1,128) && validDate(i.dataInizio) && validDate(i.dataFine)
+        && parseDate(i.dataFine) >= parseDate(i.dataInizio)
+        && ((i.oraInizio == null && i.oraFine == null) || (time(i.oraInizio) && time(i.oraFine)
+          && parseDate(i.dataInizio)+duration.value(minutes(i.oraInizio),'m') < parseDate(i.dataFine)+duration.value(minutes(i.oraFine),'m')));
+    }
+    function bumped(uid) {
+      return getAfter(/databases/$(database)/documents/users/$(uid)).data.disponibilitaVersione
+        == user(uid).disponibilitaVersione + 1;
+    }
+    match /indisponibilita/{id} {
+      allow read: if owner(resource.data.idProfessore);
+      allow create: if signed() && owner(request.resource.data.idProfessore) && teacher(request.auth.uid)
+        && request.resource.data.keys().hasOnly(['id','idProfessore','dataInizio','dataFine','oraInizio','oraFine','motivo'])
+        && request.resource.data.id == id && str(id,1,160) && validAbsence(request.resource.data)
+        && optionalString(request.resource.data,'motivo',4000) && bumped(request.auth.uid)
+        && getAfter(/databases/$(database)/documents/assenze/$(id)).data == absence(request.resource.data);
+      allow update: if false;
+      allow delete: if owner(resource.data.idProfessore) && teacher(request.auth.uid) && bumped(request.auth.uid)
+        && !existsAfter(/databases/$(database)/documents/assenze/$(id));
+    }
+    match /assenze/{id} {
+      allow read: if signed();
+      allow create: if signed() && owner(request.resource.data.idProfessore) && teacher(request.auth.uid)
+        && request.resource.data.keys().hasOnly(['idProfessore','dataInizio','dataFine','oraInizio','oraFine'])
+        && validAbsence(request.resource.data)
+        && request.resource.data == absence(getAfter(/databases/$(database)/documents/indisponibilita/$(id)).data);
+      allow update: if false;
+      allow delete: if signed() && owner(resource.data.idProfessore) && teacher(request.auth.uid)
+        && !existsAfter(/databases/$(database)/documents/indisponibilita/$(id));
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

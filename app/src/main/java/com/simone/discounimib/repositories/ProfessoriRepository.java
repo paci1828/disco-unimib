@@ -23,14 +23,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ProfessoriRepository {
+public class ProfessoriRepository implements OrarioDocenteDataSource {
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
 
     public LiveData<List<Professore>> getAllProfessori() {
         return new MutableLiveData<List<Professore>>() {
             private ListenerRegistration listener;
             @Override protected void onActive() {
-                listener = db.collection("users").whereEqualTo("ruolo", "professore")
+                listener = db.collection("professori").whereEqualTo("ruolo", "professore")
                         .addSnapshotListener((value, error) -> setValue(
                                 error == null && value != null ? value.toObjects(Professore.class) : null));
             }
@@ -47,7 +47,7 @@ public class ProfessoriRepository {
             risultato.setValue(null);
             return risultato;
         }
-        db.collection("users").document(uid).get()
+        db.collection("professori").document(uid).get()
                 .addOnSuccessListener(doc -> risultato.setValue(doc.toObject(Professore.class)))
                 .addOnFailureListener(e -> risultato.setValue(null));
         return risultato;
@@ -56,7 +56,7 @@ public class ProfessoriRepository {
     public LiveData<StatoRichiesta<List<Professore>>> getProfessoriDisponibili(String data) {
         MutableLiveData<StatoRichiesta<List<Professore>>> stato = new MutableLiveData<>();
         stato.setValue(StatoRichiesta.caricamento());
-        db.collection("users").whereEqualTo("ruolo", "professore").get(Source.SERVER)
+        db.collection("professori").whereEqualTo("ruolo", "professore").get(Source.SERVER)
                 .addOnSuccessListener(snapshot -> {
                     List<Professore> candidati = new ArrayList<>();
                     List<Task<QuerySnapshot>> richieste = new ArrayList<>();
@@ -75,7 +75,7 @@ public class ProfessoriRepository {
                             continue; // Un docente senza un orario valido non è prenotabile.
                         }
                         candidati.add(prof);
-                        richieste.add(db.collection("indisponibilita").whereEqualTo("idProfessore", prof.getUid())
+                        richieste.add(db.collection("assenze").whereEqualTo("idProfessore", prof.getUid())
                                 .get(Source.SERVER));
                     }
                     Tasks.whenAllSuccess(richieste).addOnSuccessListener(ignored -> {
@@ -99,7 +99,7 @@ public class ProfessoriRepository {
     }
 
     public void salvaOrario(String uid, String giorno, String inizio, String fine, int durata,
-                            OnTaskCompleted callback) {
+                            OrarioDocenteDataSource.Esito callback) {
         try {
             CalcolatoreDisponibilita.giorno(giorno);
             CalcolatoreDisponibilita.validaOrario(LocalTime.parse(inizio, CalcolatoreDisponibilita.ORA),
@@ -112,6 +112,11 @@ public class ProfessoriRepository {
             callback.onError("Sessione non valida");
             return;
         }
+        com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null || !uid.equals(user.getUid())) {
+            callback.onError("Sessione scaduta. Accedi nuovamente.");
+            return;
+        }
         Map<String, Object> updates = new HashMap<>();
         updates.put("giornoRicevimento", giorno);
         updates.put("oraInizio", inizio);
@@ -119,16 +124,53 @@ public class ProfessoriRepository {
         updates.put("durataAppuntamento", durata);
         DocumentReference ref = db.collection("users").document(uid);
         db.runTransaction(transaction -> {
-            Long versione = transaction.get(ref).getLong("disponibilitaVersione");
+            DocumentSnapshot profilo = transaction.get(ref);
+            if (!profilo.exists() || !"professore".equals(profilo.getString("ruolo"))) {
+                throw new IllegalStateException("Profilo docente non disponibile o non abilitato");
+            }
+            Long versione = profilo.getLong("disponibilitaVersione");
             updates.put("disponibilitaVersione", versione == null ? 1L : versione + 1);
+            Map<String, Object> dati = new HashMap<>(java.util.Objects.requireNonNull(profilo.getData(), "Profilo non disponibile"));
+            dati.putAll(updates);
             transaction.update(ref, updates);
+            transaction.set(db.collection("professori").document(uid), DatiPubblici.professore(dati));
             return null;
         }).addOnSuccessListener(ignored -> callback.onSuccess())
-                .addOnFailureListener(e -> callback.onError(e.getMessage()));
+                .addOnFailureListener(e -> callback.onError(erroreOrario(e)));
     }
 
-    public interface OnTaskCompleted {
-        void onSuccess();
-        void onError(String message);
+    @Override public void caricaOrario(String uid, OrarioDocenteDataSource.Caricamento callback) {
+        if (uid == null || uid.isEmpty()) {
+            callback.onError("Sessione scaduta. Accedi nuovamente.");
+            return;
+        }
+        db.collection("users").document(uid).get(Source.SERVER).addOnSuccessListener(doc -> {
+            try {
+                Professore prof = doc.toObject(Professore.class);
+                if (prof == null || !"professore".equals(prof.getRuolo())) {
+                    callback.onError("Profilo docente non trovato o non abilitato.");
+                } else callback.onSuccess(prof);
+            } catch (RuntimeException e) { callback.onError("I dati del profilo docente non sono validi."); }
+        }).addOnFailureListener(e -> callback.onError(erroreOrario(e)));
     }
+
+    private static String erroreOrario(Exception errore) {
+        if (errore instanceof com.google.firebase.firestore.FirebaseFirestoreException) {
+            com.google.firebase.firestore.FirebaseFirestoreException.Code codice =
+                    ((com.google.firebase.firestore.FirebaseFirestoreException) errore).getCode();
+            if (codice == com.google.firebase.firestore.FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                return "Accesso al profilo docente non autorizzato. Contatta l'amministratore o accedi nuovamente.";
+            }
+            if (codice == com.google.firebase.firestore.FirebaseFirestoreException.Code.UNAUTHENTICATED) {
+                return "Sessione scaduta. Accedi nuovamente.";
+            }
+            if (codice == com.google.firebase.firestore.FirebaseFirestoreException.Code.UNAVAILABLE) {
+                return "Connessione al servizio non disponibile. Riprova.";
+            }
+        }
+        return "Impossibile leggere o salvare l'orario. Riprova.";
+    }
+
+    public interface OnTaskCompleted extends OrarioDocenteDataSource.Esito {}
+
 }

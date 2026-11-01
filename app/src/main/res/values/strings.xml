@@ -26,4 +26,45 @@
     <string name="menu_my_appointments">I miei appuntamenti</string>
     <string name="menu_settings">Impostazioni</string>
     <string name="menu_logout">Logout</string>
+
+    <!-- Gestione e sincronizzazione dei ricevimenti -->
+    <string name="ricevimento_dettagli">Dettagli appuntamento</string>
+    <string name="ricevimento_accetta">Accetta appuntamento</string>
+    <string name="ricevimento_rifiuta">Rifiuta appuntamento</string>
+    <string name="ricevimento_annulla">Annulla appuntamento</string>
+    <string name="ricevimento_riprogramma">Riprogramma appuntamento</string>
+    <string name="ricevimento_conferma_annullamento">Vuoi annullare questo appuntamento e liberare lo slot?</string>
+    <string name="ricevimento_conferma_rifiuto">Vuoi rifiutare questa richiesta?</string>
+    <string name="ricevimento_conferma">Conferma</string>
+    <string name="ricevimento_indietro">Indietro</string>
+    <string name="ricevimento_aggiornato">Appuntamento aggiornato</string>
+    <string name="ricevimento_riprogrammato">Riprogrammazione completata</string>
+    <string name="ricevimento_conferma_riprogrammazione_studente">La prenotazione precedente sarà annullata e il nuovo orario dovrà essere confermato dal docente. Vuoi procedere?</string>
+    <string name="ricevimento_conferma_riprogrammazione_docente">La prenotazione precedente sarà annullata e il nuovo orario sarà confermato. Vuoi procedere?</string>
+    <string name="ricevimento_data_scegli">Data: %1$s — tocca per cambiarla</string>
+    <string name="ricevimento_slot_vuoti">Nessun orario disponibile. Scegli un’altra data.</string>
+    <string name="ricevimento_scegli_slot">Seleziona il nuovo orario</string>
+    <string name="ricevimento_riprova">Riprova</string>
+    <string name="ricevimento_stato">Stato: %1$s</string>
+    <string name="ricevimento_nuovo">Apri nuova prenotazione</string>
+    <string name="ricevimento_precedente">Apri prenotazione precedente</string>
+    <string name="google_collega">Collega / riprova Google</string>
+    <string name="google_descrizione">Consenti a DISCo Calendar di gestire gli eventi e inviare email dal tuo account Google docente. La sincronizzazione continuerà anche uscendo dalla schermata.</string>
+    <string name="google_studente">Calendario e notifiche vengono aggiornati dal docente. Lo stato della prenotazione è già salvato.</string>
+    <string name="google_conferma_email">Ho verificato la posta inviata</string>
+    <string name="google_verifica_email">Confermi di aver verificato e gestito questa comunicazione nella posta inviata? L’email di questo tentativo non verrà inviata nuovamente.</string>
+    <string name="google_non_richiesta">Sincronizzazione non richiesta</string>
+    <string name="google_attesa">Sincronizzazione in attesa</string>
+    <string name="google_in_corso">Sincronizzazione in corso</string>
+    <string name="google_completata">Calendario e comunicazione gestiti</string>
+    <string name="google_autorizza">È necessaria l’autorizzazione Google del docente</string>
+    <string name="google_errore">Sincronizzazione da riprovare</string>
+    <string name="google_email_incerta">Email da verificare nella posta inviata</string>
+    <string name="google_non_autorizzato">Autorizzazione Google non completata. La prenotazione resta salvata.</string>
+
+    <string name="orario_salva">Salva modifiche</string>
+    <string name="orario_riprova">Riprova caricamento</string>
+    <string name="orario_salvataggio">Salvataggio…</string>
+    <string name="orario_caricamento">Caricamento…</string>
+    <string name="orario_salvato">Orario aggiornato correttamente</string>
 </resources>

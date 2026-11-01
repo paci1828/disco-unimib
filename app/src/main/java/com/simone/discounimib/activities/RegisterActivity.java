@@ -74,7 +74,7 @@ public class RegisterActivity extends AppCompatActivity {
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
                         String uid = mAuth.getCurrentUser().getUid();
-                        saveUserToFirestore(uid, name, surname, email, role, matricola);
+                        saveUserToFirestore(uid, name, surname, mAuth.getCurrentUser().getEmail(), role, matricola);
                     } else {
                         binding.progressBar.setVisibility(View.GONE);
                         binding.registerButton.setEnabled(true);

@@ -1,9 +1,11 @@
 package com.simone.discounimib.activities;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Patterns;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -44,11 +46,7 @@ public class LoginActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         prefManager = new SharedPreferencesManager(this);
 
-        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken("791889335400-ml354c416rqha25351cavn7acav3rjba.apps.googleusercontent.com")
-                .requestEmail()
-                .build();
-        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
+        configureGoogleSignIn();
 
         binding.loginButton.setOnClickListener(v -> loginUser());
         binding.googleSignInButton.setOnClickListener(v -> signInWithGoogle());
@@ -68,7 +66,25 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
+    private void configureGoogleSignIn() {
+        // OAuth is optional while a new Firebase project is being configured.
+        // The Google Services plugin generates this resource only when a web client exists.
+        @SuppressLint("DiscouragedApi")
+        int webClientResource = getResources().getIdentifier(
+                "default_web_client_id", "string", getPackageName());
+        if (webClientResource == 0 || getString(webClientResource).trim().isEmpty()) {
+            binding.googleSignInButton.setVisibility(View.GONE);
+            return;
+        }
+        GoogleSignInOptions options = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(getString(webClientResource))
+                .requestEmail()
+                .build();
+        mGoogleSignInClient = GoogleSignIn.getClient(this, options);
+    }
+
     private void signInWithGoogle() {
+        if (mGoogleSignInClient == null) return;
         Intent signInIntent = mGoogleSignInClient.getSignInIntent();
         startActivityForResult(signInIntent, RC_SIGN_IN);
     }

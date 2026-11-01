@@ -65,6 +65,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
     protected void onStart() {
         super.onStart();
         if (!new GestoreSessioneUtente(this).valida()) logout();
+        else com.simone.discounimib.sync.SincronizzazioneScheduler.richiedi(this);
     }
 
     private void loadDefaultFragment() {

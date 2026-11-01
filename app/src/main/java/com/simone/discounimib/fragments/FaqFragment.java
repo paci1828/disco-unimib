@@ -40,7 +40,7 @@ public class FaqFragment extends Fragment {
     private void loadFaqs() {
         List<Faq> faqs = new ArrayList<>();
         faqs.add(new Faq("1", "Come prenotare?", "Vai nella sezione 'Prenota' e scegli un professore.", 1));
-        faqs.add(new Faq("2", "Come annullare?", "Vai nei 'Miei appuntamenti' e tieni premuto sull'appuntamento.", 2));
+        faqs.add(new Faq("2", "Come annullare?", "Apri l'appuntamento da 'Miei appuntamenti', scegli 'Annulla appuntamento' e conferma.", 2));
         adapter.setFaqList(faqs);
     }
 

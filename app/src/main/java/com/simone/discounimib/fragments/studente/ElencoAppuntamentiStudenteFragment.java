@@ -11,6 +11,8 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import com.google.android.material.tabs.TabLayout;
 import com.simone.discounimib.adapters.AppuntamentiAdapter;
+import com.simone.discounimib.R;
+import com.simone.discounimib.fragments.professore.AccettaRifiutaAppuntamentoFragment;
 import com.simone.discounimib.databinding.FragmentElencoAppuntamentiStudenteBinding;
 import com.simone.discounimib.utils.SharedPreferencesManager;
 import com.simone.discounimib.viewmodels.AppuntamentiViewModel;
@@ -22,6 +24,8 @@ public class ElencoAppuntamentiStudenteFragment extends Fragment {
     private AppuntamentiViewModel viewModel;
     private AppuntamentiAdapter adapter;
     private SharedPreferencesManager prefManager;
+    private androidx.lifecycle.LiveData<java.util.List<com.simone.discounimib.models.Appuntamento>> sorgente;
+
 
     @Nullable
     @Override
@@ -43,9 +47,12 @@ public class ElencoAppuntamentiStudenteFragment extends Fragment {
     }
 
     private void setupRecyclerView() {
-        adapter = new AppuntamentiAdapter();
+        adapter = new AppuntamentiAdapter(true);
         binding.recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         binding.recyclerView.setAdapter(adapter);
+        adapter.setOnItemClickListener(appuntamento -> getParentFragmentManager().beginTransaction()
+                .replace(R.id.nav_host_fragment, AccettaRifiutaAppuntamentoFragment.newInstance(appuntamento.getId()))
+                .addToBackStack(null).commit());
     }
 
     private void setupTabs() {
@@ -66,9 +73,12 @@ public class ElencoAppuntamentiStudenteFragment extends Fragment {
     private void observeAppuntamenti() {
         binding.progressBar.setVisibility(View.VISIBLE);
         String uid = prefManager.getUserUid();
-        int selectedTab = binding.tabLayout.getSelectedTabPosition();
 
-        viewModel.getAppuntamentiStudente(uid).observe(getViewLifecycleOwner(), appuntamenti -> {
+
+        if (sorgente != null) sorgente.removeObservers(getViewLifecycleOwner());
+        sorgente = viewModel.getAppuntamentiStudente(uid);
+        sorgente.observe(getViewLifecycleOwner(), appuntamenti -> {
+            int selectedTab = binding.tabLayout.getSelectedTabPosition();
             binding.progressBar.setVisibility(View.GONE);
             if (appuntamenti != null) {
                 java.util.List<com.simone.discounimib.models.Appuntamento> filteredList;
@@ -97,6 +107,8 @@ public class ElencoAppuntamentiStudenteFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        binding.recyclerView.setAdapter(null);
+        sorgente = null;
         binding = null;
     }
 }

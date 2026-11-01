@@ -11,6 +11,7 @@ import com.simone.discounimib.models.Indisponibilita;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 
 public class IndisponibilitaRepository {
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -58,7 +59,11 @@ public class IndisponibilitaRepository {
         db.runTransaction(transaction -> {
             DocumentSnapshot profilo = transaction.get(prof);
             Long versione = profilo.getLong("disponibilitaVersione");
+            Map<String, Object> dati = new java.util.HashMap<>(java.util.Objects.requireNonNull(profilo.getData(), "Profilo non disponibile"));
+            dati.put("disponibilitaVersione", versione == null ? 1L : versione + 1);
             transaction.set(ref, ind);
+            transaction.set(db.collection("assenze").document(ref.getId()), DatiPubblici.assenza(ind));
+            transaction.set(db.collection("professori").document(ind.getIdProfessore()), DatiPubblici.professore(dati));
             transaction.update(prof, "disponibilitaVersione", versione == null ? 1L : versione + 1);
             return null;
         }).addOnSuccessListener(ignored -> callback.onSuccess())
@@ -72,7 +77,12 @@ public class IndisponibilitaRepository {
             String profId = ind.getString("idProfessore");
             if (profId == null) throw new IllegalStateException("Indisponibilità non trovata");
             DocumentReference prof = db.collection("users").document(profId);
-            Long versione = transaction.get(prof).getLong("disponibilitaVersione");
+            DocumentSnapshot profilo = transaction.get(prof);
+            Long versione = profilo.getLong("disponibilitaVersione");
+            java.util.Map<String, Object> dati = new java.util.HashMap<>(java.util.Objects.requireNonNull(profilo.getData(), "Profilo non disponibile"));
+            dati.put("disponibilitaVersione", versione == null ? 1L : versione + 1);
+            transaction.set(db.collection("professori").document(profId), DatiPubblici.professore(dati));
+            transaction.delete(db.collection("assenze").document(id));
             transaction.delete(ref);
             transaction.update(prof, "disponibilitaVersione", versione == null ? 1L : versione + 1);
             return null;
